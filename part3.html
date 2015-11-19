@@ -1,0 +1,236 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+	<meta charset="UTF-8" />
+	<title>Phaser - Making your first game, part 3</title>
+	<script type="text/javascript" src="js/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var game = new Phaser.Game(1000, 1000, Phaser.AUTO, 'name', { preload: preload, create: create, update: update });
+var player;
+var enemies;
+var textures;
+var current_texture;
+var level;
+var enemies_mat;
+var pixelHeight;
+var pixelWidth;
+var cell_size;
+var tries;
+var level_time;
+var MT;
+var player_time;
+var player_MT;
+
+function preload() {
+
+    
+}
+
+function create() {
+    pixelWidth = 6;
+    pixelHeight = 6;
+    cell_size = 20;
+    level = 0;
+    tries = 0;
+    level_time = 0;
+    MT = 5;
+
+    
+
+    var alien = [
+      '....44........',
+      '....44........',
+      '......5.......',
+      '......5.......',
+      '....ABBBBA....',
+      '...ABBBBBBA...',
+      '..ABB8228BBA..',
+      '..BB882288BB..',
+      '.ABB885588BBA.',
+      'BBBB885588BBBB',
+      'BBBB788887BBBB',
+      '.ABBB7777BBBA.',
+      '.ABBBBBBBBBBA.',
+      '.AABBBBBBBBAA.',
+      '.AAAAAAAAAAAA.',
+      '.5AAAAAAAAAA5.'
+    ];
+    
+    game.create.texture('alien', alien, pixelWidth, pixelHeight);
+
+    
+    var star = [
+      '.....828.....',
+      '....72227....',
+      '....82228....',
+      '...7222227...',
+      '2222222222222',
+      '8222222222228',
+      '.72222222227.',
+      '..787777787..',
+      '..877777778..',
+      '.78778887787.',
+      '.27887.78872.',
+      '.787.....787.'
+    ];
+    
+    game.create.texture('star', star, pixelWidth, pixelHeight);
+
+    var ship = [
+      '.....DEEEEEED...',
+      '.....EEEEEFFE...',
+      '.....EEEDDFFE...',
+      '334..EEDDDDEE...',
+      '3333.EEDDDDEE...',
+      '33333EEDDDDEE...',
+      '.FF2222222222F..',
+      '.F222222222222F.',
+      '.22222222222222F',
+      '4443322222222222',
+      '44433FFFFFFFFFFF',
+      '.111FFFFFFFFFFF.',
+      '.11FFFFFFFFFFF..',
+      '.1FFFFFFFFFF1...',
+      '...3333.........',
+      '...333..........'
+    ];
+
+
+    var time_texture = [
+      '77777777777777777777',
+      '77777777777777777777',
+      '77777777777777777777',
+      '77777777777777777777',
+      '77777777777777777777',
+      '77777777777777777777',
+      '77777777777777777777',
+      '77777777777777777777',
+      '77777777777777777777',
+      '77777777777777777777'
+      ];
+
+    game.create.texture('ship', ship, pixelWidth, pixelHeight);
+    game.create.texture('time_texture', time_texture, pixelWidth, pixelHeight);
+    
+    enemies = game.add.group();
+    respawn(level);
+    game.time.events.add(Phaser.Timer.SECOND * 1, tick, this);
+    player_time=0;
+    
+
+
+}
+
+function update() {  
+    // star_count = 0;
+    // enemies.forEach(function(item) {
+    //     if(item.key=='star'){
+    //         star_count++;
+    //     }
+    // }, this);
+    // if (star_count==level){
+    //     respawn();
+    // }
+    player_time++;
+    game.debug.text("Time left: " + (MT-level_time), 700, 32);
+    game.debug.text("Expected Throughput: " + (level+2)/MT, 700, 64);
+    game.debug.text("player's throughput: " + (level+2)/(player_MT), 700, 96);
+}
+
+function listener (sprite, pointer) {
+    if (sprite.key=='alien') {
+        var still_going=false;
+        sprite.loadTexture('star',0);
+        //sprite.destroy();
+        
+        enemies.forEach(function(item) {
+            if(item.key=='alien'){
+                still_going = true;
+            }
+         }, this);
+        if (still_going) {
+
+        }else{
+            tries++;
+            if (tries>5) {
+                level++;
+                tries=0;
+            };
+            respawn(level);
+            player_MT=player_time/60;
+            player_time=0;
+        }
+        
+    };
+  
+  console.log(sprite.key);
+}
+function increaseLevel(){
+    console.log('levelup');
+}
+function respawn(number){
+    enemies.forEach(function(item) {
+        item.kill();
+        item.destroy();
+    }, this);
+    enemies_mat=[];
+    for(var i=0;i<3+level;i++){
+        enemies_mat[i]=[];
+        for(var j=0; j<3+level;j++){
+            enemies_mat[i][j]=0;
+        }
+    }
+    for (var i = 0; i <level+1; i++) {
+        var populate=true;
+        while(populate){
+            var randomX = game.rnd.integerInRange(0, level+2);
+            var randomY = game.rnd.integerInRange(0, level+2);
+            if (enemies_mat[randomX][randomY] == 0) {
+                enemies_mat[randomX][randomY] = 1;
+                populate=false;
+            }
+        }
+            
+    }
+    
+    for(var i=0; i<3+level; i++){
+        for(var j=0;j<3+level;j++){
+            if (enemies_mat[i][j]==0) {
+                current_texture='ship';
+            }else{
+                current_texture='alien'
+            }
+            var current_item = game.add.sprite(j*pixelWidth*cell_size, i*pixelHeight*cell_size, current_texture);
+            current_item.inputEnabled = true;
+            current_item.events.onInputDown.add(listener,this);
+            enemies.add(current_item);
+        }
+    }
+    level_time = 0;
+}
+
+function tick(){
+
+    level_time++;
+    console.log(level_time)
+    if (level_time>=MT) {
+        alert('youre dead')
+    }else{
+        game.time.events.add(Phaser.Timer.SECOND * 1, tick, this);
+    }
+    
+}
+
+</script>
+
+</body>
+</html>
